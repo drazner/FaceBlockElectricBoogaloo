@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "594343262287",
+    "firebase_url": "https://faceblock-e1e0e.firebaseio.com",
+    "project_id": "faceblock-e1e0e",
+    "storage_bucket": "faceblock-e1e0e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:594343262287:android:6ecfd1f4ff125c35",
+        "android_client_info": {
+          "package_name": "com.example.faceblock"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "594343262287-9l6s3kcs8tkjpktoldg3ucha7eh26qko.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.faceblock",
+            "certificate_hash": "5c95a19c26a63b12975723fbdfdfb7017a86da57"
+          }
+        },
+        {
+          "client_id": "594343262287-9a24qmi2cnunc6lduq121kderhtlcqsb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyR_cSas7KGofWXT_mfPByOBQ3FzV6nzE"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "594343262287-9a24qmi2cnunc6lduq121kderhtlcqsb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
