@@ -388,9 +388,9 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 
     public void btnRecorReload() {
         if (isRecording) {
-            btnRecord.setText("Stop Recording");
+            btnRecord.setText("Stop\nRecording");
         } else {
-            btnRecord.setText("Start Recording");
+            btnRecord.setText("Start\nRecording");
         }
 
     }

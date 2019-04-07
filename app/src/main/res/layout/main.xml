@@ -11,12 +11,12 @@
   <Button
       android:id="@+id/btnRecord"
       android:layout_width="match_parent"
-      android:layout_height="1in"
+      android:layout_height="wrap_content"
       android:gravity="bottom"
       android:onClick="onbtnRecordClick"
-      android:text="record"
+      android:text="Start\nRecording"
       android:textAlignment="center"
-      android:textSize="@android:dimen/notification_large_icon_width" />
+      android:textSize="24sp" />
 
   <com.example.faceblock.CameraSourcePreview
       android:id="@+id/preview"
