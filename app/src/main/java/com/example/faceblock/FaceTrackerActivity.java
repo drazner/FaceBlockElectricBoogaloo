@@ -28,6 +28,7 @@ import android.hardware.display.VirtualDisplay;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.net.Uri;
 import android.os.Bundle;
 //import android.support.v7.widget.;
 import android.os.Environment;
@@ -50,6 +51,7 @@ import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
 
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -81,6 +83,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
     private static final int REQUEST_PERMISSION_KEY = 1;
     boolean isRecording = false;
+    private String currFilePath;
 
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -426,8 +429,11 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         try {
             mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
             mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4); //THREE_GPP
-            mMediaRecorder.setOutputFile(Environment.getExternalStorageDirectory() + "/video.mp4");
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+            Long currTime = System.currentTimeMillis();
+            String fileName = "/" + String.valueOf(currTime) + "_video.mp4";
+            mMediaRecorder.setOutputFile(Environment.getExternalStorageDirectory() + fileName);
+            currFilePath = (Environment.getExternalStorageDirectory() + fileName);
             mMediaRecorder.setVideoSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
             mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
             mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
@@ -451,6 +457,7 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         destroyMediaProjection();
         isRecording = false;
         btnRecorReload();
+        galleryAddVid();
     }
 
     private void destroyMediaProjection() {
@@ -526,6 +533,15 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         } else {
             finish();
         }
+    }
+
+
+    private void galleryAddVid(){
+        Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+        File f = new File(currFilePath);
+        Uri contentUri = Uri.fromFile(f);
+        mediaScanIntent.setData(contentUri);
+        this.sendBroadcast(mediaScanIntent);
     }
 }
 
