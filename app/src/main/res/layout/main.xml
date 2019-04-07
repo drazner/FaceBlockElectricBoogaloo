@@ -17,11 +17,6 @@
       android:text="record"
       android:textAlignment="center"
       android:textSize="@android:dimen/notification_large_icon_width" />
-  <SurfaceView
-      android:id="@+id/surface"
-      android:layout_width="0dp"
-      android:layout_height="match_parent"
-      android:layout_weight="1"/>
 
   <com.example.faceblock.CameraSourcePreview
       android:id="@+id/preview"
@@ -34,5 +29,7 @@
         android:layout_height="match_parent" />
 
   </com.example.faceblock.CameraSourcePreview>
+
+
 
 </LinearLayout>

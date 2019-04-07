@@ -36,8 +36,8 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.SparseIntArray;
 import android.view.Surface;
-import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
@@ -50,10 +50,7 @@ import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
 
-import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 /**
  * Activity for the face tracker app.  This app detects faces with the rear facing camera, and draws
@@ -64,37 +61,33 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 
     private CameraSource mCameraSource = null;
 
-    private static final int CAST_PERMISSION_CODE = 22;
-
-    private Surface mSurface;
-    private SurfaceView mSurfaceView;
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
-    private boolean isRecording = false;
-    private MediaRecorder mMediaRecorder;
-    private MediaProjection mMediaProjection;
-    private VirtualDisplay mVirtualDisplay;
-    private DisplayMetrics mDisplayMetrics;
-
-    private int mScreenDensity;
-    private int mResultCode;
-    private Intent mResultData;
-    private MediaProjectionManager mMediaProjectionManager;
-    private static final int REQUEST_MEDIA_PROJECTION = 1;
-
-    private File mOutputFile;
 
     private static final int RC_HANDLE_GMS = 9001;
     // permission request codes need to be < 256
     private static final int RC_HANDLE_CAMERA_PERM = 2;
 
-    private final String[] requiredPermissions = {
-            Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.CAMERA
-    };
+    private static final int REQUEST_CODE = 1000;
+    private int mScreenDensity;
+    private MediaProjectionManager mProjectionManager;
+    private static final int DISPLAY_WIDTH = 720;
+    private static final int DISPLAY_HEIGHT = 1280;
+    private MediaProjection mMediaProjection;
+    private VirtualDisplay mVirtualDisplay;
+    private Button btnRecord;
+    private MediaProjectionCallback mMediaProjectionCallback;
+    private MediaRecorder mMediaRecorder;
+    private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
+    private static final int REQUEST_PERMISSION_KEY = 1;
+    boolean isRecording = false;
 
-    Button btnRecord;
+    static {
+        ORIENTATIONS.append(Surface.ROTATION_0, 90);
+        ORIENTATIONS.append(Surface.ROTATION_90, 0);
+        ORIENTATIONS.append(Surface.ROTATION_180, 270);
+        ORIENTATIONS.append(Surface.ROTATION_270, 180);
+    }
 
     //==============================================================================================
     // Activity Methods
@@ -111,19 +104,6 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay) findViewById(R.id.faceOverlay);
 
-        mDisplayMetrics = new DisplayMetrics();
-
-        mScreenDensity = mDisplayMetrics.densityDpi;
-
-        mMediaRecorder = new MediaRecorder();
-
-        mMediaProjectionManager = (MediaProjectionManager)
-                this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-
-        getWindowManager().getDefaultDisplay().getMetrics(mDisplayMetrics);
-
-        prepareRecording();
-
         // Check for the camera permission before accessing the camera.  If the
         // permission is not granted yet, request permission.
         int rc = ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
@@ -132,11 +112,34 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         } else {
             requestCameraPermission();
         }
-        mSurfaceView = (SurfaceView) this.findViewById(R.id.surface);
-        mSurface = mSurfaceView.getHolder().getSurface();
 
-        btnRecord = (Button) this.findViewById(R.id.btnRecord);
+        String[] PERMISSIONS = {
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+        };
+        if (!Function.hasPermissions(this, PERMISSIONS)) {
+            ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_PERMISSION_KEY);
+        }
 
+
+        DisplayMetrics metrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(metrics);
+        mScreenDensity = metrics.densityDpi;
+
+        mMediaRecorder = new MediaRecorder();
+
+        mProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+
+
+        btnRecord = (Button) findViewById(R.id.btnRecord);
+        btnRecord.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                onToggleScreenShare();
+
+            }
+        });
     }
 
     /**
@@ -144,22 +147,14 @@ public final class FaceTrackerActivity extends AppCompatActivity {
      * showing a "Snackbar" message of why the permission is needed then
      * sending the request.
      */
-
-    private boolean areCameraPermissionGranted() {
-
-        for (String permission : requiredPermissions){
-            if (!(ActivityCompat.checkSelfPermission(this, permission) ==
-                    PackageManager.PERMISSION_GRANTED)){
-                return false;
-            }
-        }
-        return true;
-    }
-
     private void requestCameraPermission() {
         Log.w(TAG, "Camera permission is not granted. Requesting permission");
 
-        if (areCameraPermissionGranted()){
+        final String[] permissions = new String[]{Manifest.permission.CAMERA};
+
+        if (!ActivityCompat.shouldShowRequestPermissionRationale(this,
+                Manifest.permission.CAMERA)) {
+            ActivityCompat.requestPermissions(this, permissions, RC_HANDLE_CAMERA_PERM);
             return;
         }
 
@@ -168,23 +163,18 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ActivityCompat.requestPermissions(thisActivity, requiredPermissions,
+                ActivityCompat.requestPermissions(thisActivity, permissions,
                         RC_HANDLE_CAMERA_PERM);
-                }
+            }
         };
 
-        Snackbar.make(mGraphicOverlay, "I need permissions!!!!!!",
-                Snackbar.LENGTH_INDEFINITE)
-                .setAction("ok", listener)
-                .show();
+//        Snackbar.make(mGraphicOverlay, "I need permissions!!!!!!",
+//                Snackbar.LENGTH_INDEFINITE)
+//                .setAction("ok", listener)
+//                .show();
     }
 
     public void onbtnRecordClick(View view){
-        if (isRecording){
-            stopRecording();
-        }else{
-            startRecording();
-        }
 
     }
     /**
@@ -245,13 +235,13 @@ public final class FaceTrackerActivity extends AppCompatActivity {
      * Releases the resources associated with the camera source, the associated detector, and the
      * rest of the processing pipeline.
      */
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (mCameraSource != null) {
-            mCameraSource.release();
-        }
-    }
+//    @Override
+//    protected void onDestroy() {
+//        super.onDestroy();
+//        if (mCameraSource != null) {
+//            mCameraSource.release();
+//        }
+//    }
 
     /**
      * Callback for the result from requesting permissions. This method
@@ -395,123 +385,148 @@ public final class FaceTrackerActivity extends AppCompatActivity {
             mOverlay.remove(mFaceGraphic);
         }
     }
-//    private void startScreenCapture() {
-//
-//        if (mSurface == null || this == null) {
-//            return;
-//        }
-//        if (mMediaProjection != null) {
-//            setUpVirtualDisplay();
-//        } else if (mResultCode != 0 && mResultData != null) {
-//            setUpMediaProjection();
-//            setUpVirtualDisplay();
-//        } else {
-//            Log.i(TAG, "Requesting confirmation");
-//            // This initiates a prompt dialog for the user to confirm screen projection.
-//            startActivityForResult(
-//                    mMediaProjectionManager.createScreenCaptureIntent(),
-//                    REQUEST_MEDIA_PROJECTION);
-//        }
-//    }
 
+    public void btnRecorReload() {
+        if (isRecording) {
+            btnRecord.setText("Stop Recording");
+        } else {
+            btnRecord.setText("Start Recording");
+        }
 
-    public String getCurSysDate() {
-        return new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
     }
 
-    private void prepareRecording() {
-        try {
-            mMediaRecorder.prepare();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
-
-        final String directory = Environment.getExternalStorageDirectory() + File.separator + "Recordings";
-        if (!Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())) {
-            Toast.makeText(this, "Failed to get External Storage", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        final File folder = new File(directory);
-        boolean success = true;
-        if (!folder.exists()) {
-            success = folder.mkdir();
-        }
-        String filePath;
-        if (success) {
-            String videoName = ("capture_" + getCurSysDate() + ".mp4");
-            filePath = directory + File.separator + videoName;
+    public void onToggleScreenShare() {
+        if (!isRecording) {
+            initRecorder();
+            shareScreen();
         } else {
-            Toast.makeText(this, "Failed to create Recordings directory", Toast.LENGTH_SHORT).show();
+            mMediaRecorder.stop();
+            mMediaRecorder.reset();
+            stopScreenSharing();
+        }
+    }
+
+    private void shareScreen() {
+        if (mMediaProjection == null) {
+            startActivityForResult(mProjectionManager.createScreenCaptureIntent(), REQUEST_CODE);
             return;
         }
+        mVirtualDisplay = createVirtualDisplay();
+        mMediaRecorder.start();
+        isRecording = true;
+        btnRecorReload();
+    }
 
-        int width = mDisplayMetrics.widthPixels;
-        int height = mDisplayMetrics.heightPixels;
+    private VirtualDisplay createVirtualDisplay() {
+        return mMediaProjection.createVirtualDisplay("MainActivity", DISPLAY_WIDTH, DISPLAY_HEIGHT, mScreenDensity,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, mMediaRecorder.getSurface(), null, null);
+    }
 
-        mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-        mMediaRecorder.setVideoEncodingBitRate(512 * 1000);
-        mMediaRecorder.setVideoFrameRate(30);
-        mMediaRecorder.setVideoSize(width, height);
-        mMediaRecorder.setOutputFile(filePath);
+    private void initRecorder() {
+        try {
+            mMediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+            mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4); //THREE_GPP
+            mMediaRecorder.setOutputFile(Environment.getExternalStorageDirectory() + "/video.mp4");
+            mMediaRecorder.setVideoSize(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+            mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+            mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            mMediaRecorder.setVideoEncodingBitRate(512 * 1000);
+            mMediaRecorder.setVideoFrameRate(16); // 30
+            mMediaRecorder.setVideoEncodingBitRate(3000000);
+            int rotation = getWindowManager().getDefaultDisplay().getRotation();
+            int orientation = ORIENTATIONS.get(rotation + 90);
+            mMediaRecorder.setOrientationHint(orientation);
+            mMediaRecorder.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void stopScreenSharing() {
+        if (mVirtualDisplay == null) {
+            return;
+        }
+        mVirtualDisplay.release();
+        destroyMediaProjection();
+        isRecording = false;
+        btnRecorReload();
+    }
+
+    private void destroyMediaProjection() {
+        if (mMediaProjection != null) {
+            mMediaProjection.unregisterCallback(mMediaProjectionCallback);
+            mMediaProjection.stop();
+            mMediaProjection = null;
+        }
+        Log.i(TAG, "MediaProjection Stopped");
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode != CAST_PERMISSION_CODE) {
-            // Where did we get this request from ? -_-
-            Log.w(TAG, "Unknown request code: " + requestCode);
+        if (requestCode != REQUEST_CODE) {
+            Log.e(TAG, "Unknown request code: " + requestCode);
             return;
         }
         if (resultCode != RESULT_OK) {
-            Toast.makeText(this, "Screen Cast Permission Denied :(", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Screen Cast Permission Denied", Toast.LENGTH_SHORT).show();
+            isRecording = false;
+            btnRecorReload();
             return;
         }
-        mMediaProjection = mMediaProjectionManager.getMediaProjection(resultCode, data);
-        // TODO Register a callback that will listen onStop and release & prepare the recorder for next recording
-        // mMediaProjection.registerCallback(callback, null);
-        mVirtualDisplay = getVirtualDisplay();
+        mMediaProjectionCallback = new MediaProjectionCallback();
+        mMediaProjection = mProjectionManager.getMediaProjection(resultCode, data);
+        mMediaProjection.registerCallback(mMediaProjectionCallback, null);
+        mVirtualDisplay = createVirtualDisplay();
         mMediaRecorder.start();
+        isRecording = true;
+        btnRecorReload();
     }
 
-    private VirtualDisplay getVirtualDisplay() {
-        mScreenDensity = mDisplayMetrics.densityDpi;
-        int width = mDisplayMetrics.widthPixels;
-        int height = mDisplayMetrics.heightPixels;
-
-        return mMediaProjection.createVirtualDisplay(this.getClass().getSimpleName(),
-                width, height, mScreenDensity,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                mMediaRecorder.getSurface(), null /*Callbacks*/, null /*Handler*/);
+    private class MediaProjectionCallback extends MediaProjection.Callback {
+        @Override
+        public void onStop() {
+            if (isRecording) {
+                isRecording = false;
+                btnRecorReload();
+                mMediaRecorder.stop();
+                mMediaRecorder.reset();
+            }
+            mMediaProjection = null;
+            stopScreenSharing();
+        }
     }
 
 
-    private void startRecording() {
-        // If mMediaProjection is null that means we didn't get a context, lets ask the user
-        if (mMediaProjection == null) {
-            // This asks for user permissions to capture the screen
-            startActivityForResult(mMediaProjectionManager.createScreenCaptureIntent(), CAST_PERMISSION_CODE);
-            return;
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        destroyMediaProjection();
+        if (mCameraSource != null) {
+            mCameraSource.release();
         }
-        mVirtualDisplay = getVirtualDisplay();
-        mMediaRecorder.start();
     }
 
-    private void stopRecording() {
-        if (mMediaRecorder != null) {
-            mMediaRecorder.stop();
-            mMediaRecorder.reset();
+    @Override
+    public void onBackPressed() {
+        if (isRecording) {
+            Snackbar.make(findViewById(android.R.id.content), "Wanna Stop recording and exit?",
+                    Snackbar.LENGTH_INDEFINITE).setAction("Stop",
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            mMediaRecorder.stop();
+                            mMediaRecorder.reset();
+                            Log.v(TAG, "Stopping Recording");
+                            stopScreenSharing();
+                            finish();
+                        }
+                    }).show();
+        } else {
+            finish();
         }
-        if (mVirtualDisplay != null) {
-            mVirtualDisplay.release();
-        }
-        if (mMediaProjection != null) {
-            mMediaProjection.stop();
-        }
-        prepareRecording();
     }
 }
+
+
