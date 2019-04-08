@@ -39,6 +39,7 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
     private Button captureButton;
 
     private final String[] requiredPermissions = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.RECORD_AUDIO,
             Manifest.permission.CAMERA,

@@ -117,8 +117,10 @@ public final class FaceTrackerActivity extends AppCompatActivity {
         }
 
         String[] PERMISSIONS = {
+                Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.CAMERA
         };
         if (!Function.hasPermissions(this, PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, REQUEST_PERMISSION_KEY);
@@ -175,10 +177,6 @@ public final class FaceTrackerActivity extends AppCompatActivity {
 //                Snackbar.LENGTH_INDEFINITE)
 //                .setAction("ok", listener)
 //                .show();
-    }
-
-    public void onbtnRecordClick(View view){
-
     }
     /**
      * Creates and starts the camera.  Note that this uses a higher resolution in comparison
