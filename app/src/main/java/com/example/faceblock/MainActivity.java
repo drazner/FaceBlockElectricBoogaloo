@@ -50,8 +50,8 @@ public class MainActivity extends Activity implements ActivityCompat.OnRequestPe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mPreview = (TextureView) findViewById(R.id.surface_view);
-        captureButton = (Button) findViewById(R.id.button_capture);
+        //mPreview = (TextureView) findViewById(R.id.surface_view);
+        //captureButton = (Button) findViewById(R.id.button_capture);
 
         preview();
     }
