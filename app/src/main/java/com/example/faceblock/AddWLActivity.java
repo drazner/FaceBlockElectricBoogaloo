@@ -37,17 +37,6 @@ public class AddWLActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
-//                Intent getIntent = new Intent(Intent.ACTION_GET_CONTENT);
-//                getIntent.setType("image/*");
-//                getIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-//
-//                Intent pickIntent = new Intent(Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-//                pickIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-//                pickIntent.setType("image/*");
-//
-//                Intent chooserIntent = Intent.createChooser(getIntent, "Select Image");
-//                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[] {pickIntent});
-//                chooserIntent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 Intent intent = new Intent();
                 intent.setType("image/*");
                 intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
@@ -55,6 +44,7 @@ public class AddWLActivity extends AppCompatActivity {
                 startActivityForResult(Intent.createChooser(intent,"Select Picture"), PICK_IMAGE);
             }
         });
+
 
         btnTakePicture.setOnClickListener(new View.OnClickListener() {
             @Override
