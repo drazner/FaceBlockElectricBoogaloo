@@ -23,6 +23,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.MediaRecorder;
@@ -363,6 +365,11 @@ public final class FaceTrackerActivity extends AppCompatActivity {
          */
         @Override
         public void onUpdate(FaceDetector.Detections<Face> detectionResults, Face face) {
+            try {
+                Bitmap FaceThumbNail = mFaceGraphic.generateFaceThumbnail(face, BitmapFactory.decodeResource(getResources(), R.id.preview));
+            }catch (Exception e){
+                //FIXME probably do something
+            }
             mOverlay.add(mFaceGraphic);
             mFaceGraphic.updateFace(face);
         }

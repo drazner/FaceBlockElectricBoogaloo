@@ -15,11 +15,15 @@
  */
 package com.example.faceblock;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
 import com.google.android.gms.vision.face.Face;
+import com.microsoft.projectoxford.face.contract.FaceRectangle;
+
+import java.io.IOException;
 
 
 /**
@@ -50,7 +54,6 @@ class FaceGraphic extends GraphicOverlay.Graphic {
 
     private volatile Face mFace;
     private int mFaceId;
-    private float mFaceHappiness;
 
     FaceGraphic(GraphicOverlay overlay) {
         super(overlay);
@@ -100,12 +103,6 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         // Draws a circle at the position of the detected face, with the face's track id below.
         float x = translateX(face.getPosition().x + face.getWidth() / 2);
         float y = translateY(face.getPosition().y + face.getHeight() / 2);
-//        canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
-//        canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
-//        canvas.drawText("happiness: " + String.format("%.2f", face.getIsSmilingProbability()), x - ID_X_OFFSET, y - ID_Y_OFFSET, mIdPaint);
-//        canvas.drawText("right eye: " + String.format("%.2f", face.getIsRightEyeOpenProbability()), x + ID_X_OFFSET * 2, y + ID_Y_OFFSET * 2, mIdPaint);
-//        canvas.drawText("left eye: " + String.format("%.2f", face.getIsLeftEyeOpenProbability()), x - ID_X_OFFSET*2, y - ID_Y_OFFSET*2, mIdPaint);
-
         // Draws a bounding box around the face.
         float xOffset = scaleX(face.getWidth() / 2.0f);
         float yOffset = scaleY(face.getHeight() / 2.0f);
@@ -114,5 +111,13 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         float right = x + xOffset;
         float bottom = y + yOffset;
         canvas.drawRect(left, top, right, bottom, mBoxPaint);
+    }
+
+    public Bitmap generateFaceThumbnail(Face face,
+            Bitmap originalBitmap) throws IOException {
+
+        return Bitmap.createBitmap(
+                originalBitmap, Math.round(face.getPosition().x), Math.round(face.getPosition().y),
+                Math.round(face.getWidth()), Math.round(face.getHeight()));
     }
 }
